@@ -242,3 +242,88 @@ def test_read_image_and_mask_invalid_format(tmp_path):
     with pytest.raises(ValueError, match="Both files must be in .nii format"):
         read_image_and_mask(str(image_file), str(mask_file))
 
+
+import pytest
+from utils import extract_id
+
+
+def test_extract_id_valid():
+    """
+    Test that the function correctly extracts the patient ID from a valid file path.
+
+    GIVEN: A file path with a patient ID.
+    WHEN: The extract_id function is called.
+    THEN: The function returns the correct patient ID.
+    """
+    valid_path = "/path/to/PR12345_image.nii"
+    result = extract_id(valid_path)
+    assert result == 12345, f"Expected patient ID: 12345, but got: {result}"
+
+
+def test_extract_id_invalid():
+    """
+    Test that the function returns None when no patient ID is found in the file path.
+
+    GIVEN: A file path without a patient ID.
+    WHEN: The extract_id function is called.
+    THEN: The function returns None.
+    """
+    invalid_path = "/path/to/image_without_id.nii"
+    result = extract_id(invalid_path)
+    assert result is None, f"Expected None, but got: {result}"
+
+
+def test_extract_id_no_match():
+    """
+    Test that the function handles paths with no 'PR' followed by digits.
+
+    GIVEN: A file path with no valid patient ID.
+    WHEN: The extract_id function is called.
+    THEN: The function returns None.
+    """
+    path = "/path/to/invalid_patient_image.nii"
+    result = extract_id(path)
+    assert result is None, f"Expected None, but got: {result}"
+
+
+import pytest
+from utils import assign_new_patient_id
+
+
+def test_assign_new_patient_id_unique():
+    """
+    Test that the function correctly assigns a unique patient ID.
+
+    GIVEN: A set of existing patient IDs.
+    WHEN: The assign_new_patient_id function is called.
+    THEN: The function returns a new unique patient ID.
+    """
+    existing_ids = {1, 2, 3, 4}
+    result = assign_new_patient_id(existing_ids)
+    assert result == 5, f"Expected new ID: 5, but got: {result}"
+
+
+def test_assign_new_patient_id_next_available():
+    """
+    Test that the function finds the next available patient ID, skipping any duplicates.
+
+    GIVEN: A set of existing patient IDs.
+    WHEN: The assign_new_patient_id function is called.
+    THEN: The function returns the next available patient ID (skipping duplicates).
+    """
+    existing_ids = {1, 2, 4, 5}
+    result = assign_new_patient_id(existing_ids)
+    assert result == 3, f"Expected new ID: 3, but got: {result}"
+
+
+def test_assign_new_patient_id_no_duplicates():
+    """
+    Test that the function works even when there are no duplicates in the IDs.
+
+    GIVEN: A set of patient IDs without any duplicates.
+    WHEN: The assign_new_patient_id function is called.
+    THEN: The function returns the next available patient ID.
+    """
+    existing_ids = {1, 2, 3}
+    result = assign_new_patient_id(existing_ids)
+    assert result == 4, f"Expected new ID: 4, but got: {result}"

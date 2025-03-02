@@ -1,5 +1,6 @@
 import glob
 import os
+import re
 import SimpleITK as sitk
 
 # Extract file and mask path
@@ -29,3 +30,34 @@ def read_image_and_mask(image_path, mask_path):
     img = sitk.ReadImage(image_path)
     mask = sitk.ReadImage(mask_path)
     return img, mask
+
+
+# Extract patient ID from file name
+def extract_id(path):
+    """
+    Extract the patient ID from the file name.
+
+    :param path: Path to the image file
+    :return: Patient ID if found, else None
+    """
+    match = re.search(r'PR(\d+)', path)
+    if match:
+        return int(match.group(1))
+    else:
+        print('No patient ID found in the file name.')
+        return None
+
+# Assign a new patient ID by finding the first available ID
+def assign_new_patient_id(patients_id):
+    """
+    Assign a new patient ID by finding the first available ID (avoiding duplicates).
+
+    :param patients_id: Set of existing patient IDs to check for uniqueness
+    :return: A new, unique patient ID
+    """
+    new_id = 1
+    while new_id in patients_id:
+        new_id += 1
+    return new_id
+
+
