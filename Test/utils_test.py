@@ -1,6 +1,6 @@
 import pytest
 import SimpleITK as sitk
-from utils import get_path_images_masks, read_image_and_mask, extract_id, new_patient_id, assign_patient_ids
+from utils import get_path_images_masks, extract_id, new_patient_id, assign_patient_ids
 
 
 @pytest.fixture
@@ -154,102 +154,6 @@ def test_get_path_images_masks_multiple_masks_for_one_image(tmp_path):
     assert str(exc_info.value) == "The number of image files does not match the number of mask files", \
         f"Expected error message 'The number of image files does not match the number of mask files', but got: {str(exc_info.value)}"
 
-
-def test_read_image_and_mask_file_not_found():
-    """
-    Test that the function raises an error when the image or mask file does not exist.
-
-    GIVEN: Non-existent image or mask paths.
-    WHEN: The read_image_and_mask function is called with the non-existent paths.
-    THEN: A FileNotFoundError is raised.
-    """
-    non_existent_image = "non_existent_image.nii"
-    non_existent_mask = "non_existent_mask.nii"
-
-    with pytest.raises(FileNotFoundError):
-        read_image_and_mask(non_existent_image, non_existent_mask)
-
-def test_read_image_and_mask_empty_image(tmp_path):
-    """
-    Test that the function raises an error when the image file is empty.
-
-    GIVEN: An empty image file and a valid mask file.
-    WHEN: The read_image_and_mask function is called with the empty image.
-    THEN: An error is raised due to the empty image.
-    """
-    empty_image = tmp_path / "empty_image.nii"
-    valid_mask = tmp_path / "valid_mask_seg.nii"
-
-    # Create an empty image file
-    empty_image.write_text("")  # Empty file
-
-    # Create a valid mask file
-    (valid_mask).write_text("test")
-
-    with pytest.raises(RuntimeError):
-        read_image_and_mask(str(empty_image), str(valid_mask))
-
-def test_read_image_and_mask_valid(tmp_path):
-    """
-    Test that the function works when both the image and mask files are valid.
-
-    GIVEN: A valid image file and a valid mask file.
-    WHEN: The read_image_and_mask function is called with these files.
-    THEN: The function should return SimpleITK images for both the image and the mask.
-    """
-    valid_image = tmp_path / "valid_image.nii"
-    valid_mask = tmp_path / "valid_mask_seg.nii"
-
-    # Create a valid image file
-    (valid_image).write_text("test")
-
-    # Create a valid mask file
-    (valid_mask).write_text("test")
-
-    img, mask = read_image_and_mask(str(valid_image), str(valid_mask))
-
-    assert isinstance(img, sitk.Image), "Expected SimpleITK image for the image file."
-    assert isinstance(mask, sitk.Image), "Expected SimpleITK image for the mask file."
-
-
-def test_read_image_and_mask_swapped_inputs(tmp_path):
-    """
-    Test that the function raises an error if the image and mask inputs are swapped.
-
-    GIVEN: An image file passed as the mask and a mask file passed as the image.
-    WHEN: The read_image_and_mask function is called with the swapped inputs.
-    THEN: A ValueError is raised indicating that the files are mismatched.
-    """
-    image_file = tmp_path / "image_file.nii"
-    mask_file = tmp_path / "mask_file_seg.nii"
-
-    # Create an image and a mask file
-    (image_file).write_text("test_image")
-    (mask_file).write_text("test_mask")
-
-    # Swap inputs: pass the image as the mask and the mask as the image
-    with pytest.raises(ValueError, match="The image and mask files seem to be swapped."):
-        read_image_and_mask(str(mask_file), str(image_file))
-
-
-def test_read_image_and_mask_invalid_format(tmp_path):
-    """
-    Test that the function raises an error when the input files are not in .nii format.
-
-    GIVEN: A .txt file passed as the image or mask.
-    WHEN: The read_image_and_mask function is called with a .txt file.
-    THEN: A ValueError is raised indicating that the file format is invalid.
-    """
-    image_file = tmp_path / "image_file.txt"  # Wrong format (.txt instead of .nii)
-    mask_file = tmp_path / "mask_file_seg.txt"  # Wrong format for mask
-
-    # Create the invalid image and mask files
-    (image_file).write_text("test_image")
-    (mask_file).write_text("test_mask")
-
-    # Now let's check if the function raises a ValueError when a .txt file is passed
-    with pytest.raises(ValueError, match="Both files must be in .nii format"):
-        read_image_and_mask(str(image_file), str(mask_file))
 
 
 

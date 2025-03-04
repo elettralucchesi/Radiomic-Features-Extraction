@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import SimpleITK as sitk
 from scipy.ndimage import label
@@ -116,22 +117,38 @@ def get_volume_3D(image, mask, patient_id):
         'MaskVolume': mask
     }]
 
-# Read image and mask
+
+
 def read_image_and_mask(image_path, mask_path):
     """
     Read an image and its corresponding mask using SimpleITK.
 
-    :param image_path: Path to the image file
-    :param mask_path: Path to the mask file
-    :return: Tuple containing the image and mask as SimpleITK images
+    :param image_path: Path to the image file.
+    :param mask_path: Path to the mask file.
+    :return: Tuple containing the image and mask as SimpleITK images.
+    :raises ValueError: If any of the input paths is empty.
+    :raises TypeError: If the input paths are not strings.
+    :raises ValueError: If the parent directories of the image and mask do not match.
+    :raises ValueError: If the image and mask dimensions do not match.
     """
+
+    if not image_path or not mask_path:
+        raise ValueError("Image and mask paths cannot be empty.")
+
+    if not isinstance(image_path, str) or not isinstance(mask_path, str):
+        raise TypeError("Image and mask paths must be strings.")
+
+    if os.path.dirname(image_path) != os.path.dirname(mask_path):
+        raise ValueError("Image and mask must be in the same directory.")
 
     img = sitk.ReadImage(image_path)
     mask = sitk.ReadImage(mask_path)
 
-    print("Image size:", img.GetSize())
-    print("Mask size:", mask.GetSize())
+    if img.GetSize() != mask.GetSize():
+        raise ValueError("Image and mask dimensions do not match.")
+
     return img, mask
+
 
 
 def get_patient_image_mask_dict(imgs_path, masks_path, patient_ids, mode):

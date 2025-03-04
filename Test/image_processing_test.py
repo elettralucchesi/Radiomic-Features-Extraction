@@ -639,3 +639,47 @@ def test_get_patient_image_mask_dict_3D_img_dimension(monkeypatch, mock_read_ima
 
     for patient_id in sample_data["patient_ids"]:
         assert result[patient_id][0]['ImageVolume'].GetDimension() == 3, "Image should be 3D in 3D mode."
+
+
+def test_read_image_and_mask_empty_path():
+    """
+    GIVEN: Empty paths for image and mask.
+    WHEN: The function is called.
+    THEN: It should raise a ValueError.
+    """
+    with pytest.raises(ValueError, match="Image and mask paths cannot be empty."):
+        read_image_and_mask("", "")
+
+
+def test_read_image_and_mask_non_string_path():
+    """
+    GIVEN: Non-string paths for image and mask.
+    WHEN: The function is called.
+    THEN: It should raise a TypeError.
+    """
+    with pytest.raises(TypeError, match="Image and mask paths must be strings."):
+        read_image_and_mask(123, 456)
+
+
+@pytest.fixture
+def mock_read_image_and_mask_different_size():
+    """Mock function to return an image and a mask with different dimensions."""
+    def _mock(img_path, mask_path):
+        img = sitk.Image(3, 3, 3, sitk.sitkUInt8)  # 3x3x3 image
+        mask = sitk.Image(4, 4, 4, sitk.sitkUInt8)  # 4x4x4 mask (different size)
+        return img, mask
+
+    return _mock
+
+
+def test_read_image_and_mask_dimension_mismatch(mock_read_image_and_mask_different_size, monkeypatch):
+    """
+    GIVEN: Image and mask with different dimensions.
+    WHEN: The function is called.
+    THEN: It should raise a ValueError.
+    """
+    monkeypatch.setattr("SimpleITK.ReadImage",
+                        lambda path: mock_read_image_and_mask_different_size(path, path)[0 if "image" in path else 1])
+
+    with pytest.raises(ValueError, match="Image and mask dimensions do not match."):
+        read_image_and_mask("image.nii", "mask.nii")
