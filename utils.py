@@ -30,24 +30,6 @@ def get_path_images_masks(path):
     return img, mask
 
 
-# Read image and mask
-def read_image_and_mask(image_path, mask_path):
-    """
-    Read an image and its corresponding mask using SimpleITK.
-
-    :param image_path: Path to the image file
-    :param mask_path: Path to the mask file
-    :return: Tuple containing the image and mask as SimpleITK images
-    """
-
-    img = sitk.ReadImage(image_path)
-    mask = sitk.ReadImage(mask_path)
-
-    print("Image size:", img.GetSize())
-    print("Mask size:", mask.GetSize())
-    return img, mask
-
-
 
 def extract_id(path):
     """

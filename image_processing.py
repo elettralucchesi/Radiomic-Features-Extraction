@@ -89,7 +89,7 @@ def get_slices_2D(image, mask, patient_id):
         largest_region_mask_image  = sitk.GetImageFromArray(region_mask)
         image_slice_image = sitk.GetImageFromArray(image_slice)
         patient_slices.append({
-            'PatientID': patient_id,
+            'PatientID': f"PR{patient_id}",
             'Label': region_label,
             'SliceIndex': slice_idx,
             'ImageSlice': largest_region_mask_image ,
@@ -111,7 +111,48 @@ def get_volume_3D(image, mask, patient_id):
         raise ValueError(f"Expected 'patient_id' to be a int, but got {type(patient_id)}.")
 
     return [{
-        'PatientID': patient_id,
+        'PatientID': f"PR{patient_id}",
         'ImageVolume': image,
         'MaskVolume': mask
     }]
+
+# Read image and mask
+def read_image_and_mask(image_path, mask_path):
+    """
+    Read an image and its corresponding mask using SimpleITK.
+
+    :param image_path: Path to the image file
+    :param mask_path: Path to the mask file
+    :return: Tuple containing the image and mask as SimpleITK images
+    """
+
+    img = sitk.ReadImage(image_path)
+    mask = sitk.ReadImage(mask_path)
+
+    print("Image size:", img.GetSize())
+    print("Mask size:", mask.GetSize())
+    return img, mask
+
+
+def get_patient_image_mask_dict(imgs_path, masks_path, patient_ids, mode):
+    if len(patient_ids) == 0:
+        raise ValueError("The patient_ids list cannot be empty.")
+
+    if len(imgs_path) != len(masks_path) or len(imgs_path) != len(patient_ids):
+        raise ValueError("The number of images, masks, and patient_ids must be the same.")
+
+    patient_dict = {}
+
+    for pr_id, img_path, mask_path in zip(patient_ids, imgs_path, masks_path):
+        img, mask = read_image_and_mask(img_path, mask_path)
+
+        if mode == "2D":
+            patient_slices = get_slices_2D(img, mask, pr_id)
+            patient_dict[pr_id] = patient_slices
+        elif mode == "3D":
+            patient_volume = get_volume_3D(img, mask, pr_id)
+            patient_dict[pr_id] = patient_volume
+        else:
+            raise ValueError("Mode should be '2D' or '3D'")
+
+    return patient_dict

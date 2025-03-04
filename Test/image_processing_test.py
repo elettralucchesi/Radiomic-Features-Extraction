@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 import SimpleITK as sitk
-from image_processing import extract_largest_region, process_slice, get_slices_2D, get_volume_3D
+from image_processing import *
 
 
 def test_extract_largest_region_correct():
@@ -305,7 +305,7 @@ def test_get_slices_2D_patient_id():
 
     slices = get_slices_2D(image, mask, patient_id)
 
-    assert slices[0]['PatientID'] == patient_id, f"Expected PatientID '{patient_id}', but got {slices[0]['PatientID']}."
+    assert slices[0]['PatientID'] == f"PR{patient_id}", f"Expected PatientID 'PR{patient_id}', but got {slices[0]['PatientID']}."
 
 
 def test_get_slices_2D_slice_index():
@@ -497,3 +497,145 @@ def test_get_volume_3D_invalid_patient_id():
     with pytest.raises(ValueError, match="Expected 'patient_id' to be a int"):
         get_volume_3D(image_3d, mask_3d, patient_id)
 
+
+
+def test_get_patient_image_mask_dict_empty_patient_ids():
+    """
+    GIVEN: An empty list for patient_ids.
+    WHEN: The get_patient_image_mask_dict function is called.
+    THEN: The function should raise a ValueError indicating that the patient_ids list cannot be empty.
+    """
+    imgs_path = ["img1.nii", "img2.nii"]
+    masks_path = ["mask1.nii", "mask2.nii"]
+    patient_ids = []  # Empty patient_ids list
+    mode = "3D"
+
+    with pytest.raises(ValueError, match="The patient_ids list cannot be empty."):
+        get_patient_image_mask_dict(imgs_path, masks_path, patient_ids, mode)
+
+
+def test_get_patient_image_mask_dict_images_masks_and_patient_ids_count():
+    """
+    GIVEN: Lists of image paths, mask paths, and patient ids with unequal lengths.
+    WHEN: The get_patient_image_mask_dict function is called.
+    THEN: The function should raise a ValueError indicating that the number of images, masks, and patient_ids must be the same.
+    """
+    imgs_path = ["img1.nii", "img2.nii"]
+    masks_path = ["mask1.nii"]
+    patient_ids = [1, 2]
+    mode = "3D"
+
+    with pytest.raises(ValueError, match="The number of images, masks, and patient_ids must be the same."):
+        get_patient_image_mask_dict(imgs_path, masks_path, patient_ids, mode)
+
+
+from unittest.mock import patch
+
+
+@patch('image_processing.read_image_and_mask')
+def test_get_patient_image_mask_dict_invalid_mode(mock_read_image):
+    # Simula il comportamento della funzione
+    mock_read_image.return_value = (None, None)  # Simuliamo un ritorno fittizio da `read_image_and_mask`
+
+    imgs_path = ["img1.nii", "img2.nii"]
+    masks_path = ["mask1.nii", "mask2.nii"]
+    patient_ids = [1, 2]
+    mode = "4D"  # Invalid mode
+
+    with pytest.raises(ValueError, match="Mode should be '2D' or '3D'"):
+        get_patient_image_mask_dict(imgs_path, masks_path, patient_ids, mode)
+
+
+@pytest.fixture
+def mock_read_image_and_mask():
+    """Mock function to replace read_image_and_mask."""
+
+    def _mock(img_path, mask_path):
+        img = sitk.Image(3, 3, 3, sitk.sitkUInt8)
+        mask = sitk.Image(3, 3, 3, sitk.sitkUInt8)
+        return img, mask
+
+    return _mock
+
+
+@pytest.fixture
+def sample_data():
+    """Fixture providing sample input data."""
+    return {
+        "imgs_path": ["img1.nii", "img2.nii"],
+        "masks_path": ["mask1.nii", "mask2.nii"],
+        "patient_ids": [1, 2],
+        "mode": "3D",
+    }
+
+
+def test_get_patient_image_mask_dict_type(monkeypatch, mock_read_image_and_mask, sample_data):
+    """Check if the function returns a dictionary."""
+    monkeypatch.setattr("image_processing.read_image_and_mask", mock_read_image_and_mask)
+
+    result = get_patient_image_mask_dict(**sample_data)
+
+    assert isinstance(result, dict), f"Expected a dictionary, but got {type(result)}"
+
+def test_get_patient_image_mask_dict_patient_count(monkeypatch, mock_read_image_and_mask, sample_data):
+    """Check if the function returns the correct number of patients."""
+    monkeypatch.setattr("image_processing.read_image_and_mask", mock_read_image_and_mask)
+
+    result = get_patient_image_mask_dict(**sample_data)
+
+    assert len(result) == 2, f"Expected 2 patients, but got {len(result)}"
+
+
+def test_get_patient_image_mask_dict_3D_mask_type(monkeypatch, mock_read_image_and_mask, sample_data):
+    """
+    GIVEN: A valid list of 3D images and masks with patient IDs.
+    WHEN: The function is called in 3D mode.
+    THEN: The masks in the output dictionary should be instances of SimpleITK Image.
+    """
+    monkeypatch.setattr("image_processing.read_image_and_mask", mock_read_image_and_mask)
+
+    result = get_patient_image_mask_dict(**sample_data)
+
+    for patient_id in sample_data["patient_ids"]:
+        assert isinstance(result[patient_id][0]['MaskVolume'], sitk.Image), "Mask should be a SimpleITK image."
+
+
+def test_get_patient_image_mask_dict_3D_mask_dimension(monkeypatch, mock_read_image_and_mask, sample_data):
+    """
+    GIVEN: A valid list of 3D images and masks with patient IDs.
+    WHEN: The function is called in 3D mode.
+    THEN: The masks in the output dictionary should have 3 dimensions.
+    """
+    monkeypatch.setattr("image_processing.read_image_and_mask", mock_read_image_and_mask)
+
+    result = get_patient_image_mask_dict(**sample_data)
+
+    for patient_id in sample_data["patient_ids"]:
+        assert result[patient_id][0]['MaskVolume'].GetDimension() == 3, "Mask should be 3D in 3D mode."
+
+def test_get_patient_image_mask_dict_3D_img_type(monkeypatch, mock_read_image_and_mask, sample_data):
+    """
+    GIVEN: A valid list of 3D images and masks with patient IDs.
+    WHEN: The function is called in 3D mode.
+    THEN: The image in the output dictionary should be instances of SimpleITK Image.
+    """
+    monkeypatch.setattr("image_processing.read_image_and_mask", mock_read_image_and_mask)
+
+    result = get_patient_image_mask_dict(**sample_data)
+
+    for patient_id in sample_data["patient_ids"]:
+        assert isinstance(result[patient_id][0]['ImageVolume'], sitk.Image), "Image should be a SimpleITK image."
+
+
+def test_get_patient_image_mask_dict_3D_img_dimension(monkeypatch, mock_read_image_and_mask, sample_data):
+    """
+    GIVEN: A valid list of 3D images and masks with patient IDs.
+    WHEN: The function is called in 3D mode.
+    THEN: The image in the output dictionary should have 3 dimensions.
+    """
+    monkeypatch.setattr("image_processing.read_image_and_mask", mock_read_image_and_mask)
+
+    result = get_patient_image_mask_dict(**sample_data)
+
+    for patient_id in sample_data["patient_ids"]:
+        assert result[patient_id][0]['ImageVolume'].GetDimension() == 3, "Image should be 3D in 3D mode."
