@@ -29,3 +29,38 @@ def test_get_extractor_file_not_found():
     """
     with pytest.raises(FileNotFoundError, match="The file 'non_existent.yaml' does not exist."):
         get_extractor("non_existent.yaml")
+
+
+import SimpleITK as sitk
+import numpy as np
+from unittest.mock import Mock
+import pytest
+import numpy as np
+import SimpleITK as sitk
+from unittest.mock import Mock
+import pytest
+import numpy as np
+import SimpleITK as sitk
+from unittest.mock import Mock
+
+def test_radiomic_extractor_3D_empty_labels():
+    """
+    GIVEN a patient_dict_3D with an empty mask (no labels)
+    WHEN radiomic_extractor_3D is called with these inputs
+    THEN it should raise a ValueError indicating no labels in the mask
+    """
+    # Mock data for the patient (SimpleITK Image objects)
+    img_1 = sitk.GetImageFromArray(np.random.rand(10, 10, 10))
+    mask_1 = sitk.GetImageFromArray(np.zeros((10, 10, 10)))  # Empty mask (no labels)
+
+    # Mock patient_dict_3D with SimpleITK images
+    patient_dict_3D = {
+        "123": [{"ImageVolume": img_1, "MaskVolume": mask_1}],
+    }
+
+    # Mock extractor object
+    extractor = Mock()
+
+    # Call the function under test and check for the raised error
+    with pytest.raises(ValueError, match="No labels found in mask for patient 123"):
+        radiomic_extractor_3D(patient_dict_3D, extractor)
