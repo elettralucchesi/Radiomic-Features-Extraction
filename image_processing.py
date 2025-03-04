@@ -65,8 +65,6 @@ def process_slice(mask_slice):
             return largest_region_mask, lbl
 
 
-
-# Estrai le slice 2D
 def get_slices_2D(image, mask, patient_id):
 
     if not isinstance(image, sitk.Image):
@@ -76,8 +74,8 @@ def get_slices_2D(image, mask, patient_id):
         raise TypeError(f"Expected 'mask' to be a SimpleITK Image, but got {type(mask)}.")
 
     # Verifica che patient_id sia una stringa
-    if not isinstance(patient_id, str):
-        raise ValueError(f"Expected 'patient_id' to be a string, but got {type(patient_id)}.")
+    if not isinstance(patient_id, int):
+        raise ValueError(f"Expected 'patient_id' to be a int, but got {type(patient_id)}.")
 
     image_array = sitk.GetArrayFromImage(image)
     mask_array = sitk.GetArrayFromImage(mask)
@@ -99,3 +97,21 @@ def get_slices_2D(image, mask, patient_id):
         })
 
     return patient_slices
+
+
+def get_volume_3D(image, mask, patient_id):
+
+    if not isinstance(image, sitk.Image):
+        raise TypeError(f"Expected 'image' to be a SimpleITK Image, but got {type(image)}.")
+
+    if not isinstance(mask, sitk.Image):
+        raise TypeError(f"Expected 'mask' to be a SimpleITK Image, but got {type(mask)}.")
+
+    if not isinstance(patient_id, int):
+        raise ValueError(f"Expected 'patient_id' to be a int, but got {type(patient_id)}.")
+
+    return [{
+        'PatientID': patient_id,
+        'ImageVolume': image,
+        'MaskVolume': mask
+    }]

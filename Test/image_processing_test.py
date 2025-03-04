@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 import SimpleITK as sitk
-from image_processing import extract_largest_region, process_slice, get_slices_2D
+from image_processing import extract_largest_region, process_slice, get_slices_2D, get_volume_3D
 
 
 def test_extract_largest_region_correct():
@@ -278,7 +278,7 @@ def test_get_slices_2D_valid_length():
     ])
     image = sitk.GetImageFromArray(image_array)
     mask = sitk.GetImageFromArray(mask_array)
-    patient_id = "Patient1"
+    patient_id = 1234
 
     slices = get_slices_2D(image, mask, patient_id)
 
@@ -301,7 +301,7 @@ def test_get_slices_2D_patient_id():
     ])
     image = sitk.GetImageFromArray(image_array)
     mask = sitk.GetImageFromArray(mask_array)
-    patient_id = "Patient1"
+    patient_id = 1234
 
     slices = get_slices_2D(image, mask, patient_id)
 
@@ -324,7 +324,7 @@ def test_get_slices_2D_slice_index():
     ])
     image = sitk.GetImageFromArray(image_array)
     mask = sitk.GetImageFromArray(mask_array)
-    patient_id = "Patient1"
+    patient_id = 1234
 
     slices = get_slices_2D(image, mask, patient_id)
 
@@ -347,7 +347,7 @@ def test_get_slices_2D_image_slice():
     ])
     image = sitk.GetImageFromArray(image_array)
     mask = sitk.GetImageFromArray(mask_array)
-    patient_id = "Patient1"
+    patient_id = 1234
 
     slices = get_slices_2D(image, mask, patient_id)
 
@@ -370,7 +370,7 @@ def test_get_slices_2D_mask_slice():
     ])
     image = sitk.GetImageFromArray(image_array)
     mask = sitk.GetImageFromArray(mask_array)
-    patient_id = "Patient1"
+    patient_id = 1234
 
     slices = get_slices_2D(image, mask, patient_id)
 
@@ -393,7 +393,7 @@ def test_get_slices_2D_labels():
     ])
     image = sitk.GetImageFromArray(image_array)
     mask = sitk.GetImageFromArray(mask_array)
-    patient_id = "Patient1"
+    patient_id = 1234
     slices = get_slices_2D(image, mask, patient_id)
     assert slices[0]['Label'] == 1, f"Expected label 1 for first slice, but got {slices[0]['Label']}."
 
@@ -408,7 +408,7 @@ def test_get_slices_2D_invalid_image_type():
     """
     mask_array = np.random.rand(3, 4, 4)
     mask = sitk.GetImageFromArray(mask_array)
-    patient_id = "Patient1"
+    patient_id = 1234
 
     with pytest.raises(TypeError, match="Expected 'image' to be a SimpleITK Image"):
         get_slices_2D("invalid_image", mask, patient_id)
@@ -423,24 +423,77 @@ def test_invalid_mask_type():
     """
     valid_image = sitk.Image(10, 10, 10, sitk.sitkUInt8)  # Valid SimpleITK image
     invalid_mask = "invalid_mask"  # A string, not a SimpleITK Image
-    patient_id = "patient_1"
+    patient_id = 1234
 
     with pytest.raises(TypeError, match="Expected 'mask' to be a SimpleITK Image"):
         get_slices_2D(valid_image, invalid_mask, patient_id)
 
 def test_invalid_patient_id_type():
     """
-    Test that the function raises a ValueError if the patient_id is not a string.
+    Test that the function raises a ValueError if the patient_id is not int.
 
-    GIVEN: A non-string patient_id.
+    GIVEN: A string patient_id.
     WHEN: The get_slices_2D function is called.
     THEN: The function should raise a ValueError indicating the invalid patient_id type.
     """
     valid_image = sitk.Image(10, 10, 10, sitk.sitkUInt8)  # Valid SimpleITK image
     valid_mask = sitk.Image(10, 10, 10, sitk.sitkUInt8)  # Valid SimpleITK mask
-    invalid_patient_id = 12345  # Not a string
+    invalid_patient_id = '12345'  # Not a string
 
-    with pytest.raises(ValueError, match="Expected 'patient_id' to be a string"):
+    with pytest.raises(ValueError, match="Expected 'patient_id' to be a int"):
         get_slices_2D(valid_image, valid_mask, invalid_patient_id)
 
+
+def test_get_volume_3D_return_type():
+    """
+    GIVEN: A 3D image and mask.
+    WHEN: The get_volume_3D function is called.
+    THEN: The function should return a list containing a dictionary with the correct keys.
+    """
+    image_3d = sitk.Image(3, 3, 3, sitk.sitkUInt8)
+    mask_3d = sitk.Image(3, 3, 3, sitk.sitkUInt8)
+    patient_id = 1234
+
+    result = get_volume_3D(image_3d, mask_3d, patient_id)
+
+    assert isinstance(result, list), f"Expected result to be a list, but got {type(result)}."
+
+def test_get_volume_3D_invalid_image_type():
+    """
+    GIVEN: A non-SimpleITK image (e.g., a numpy array).
+    WHEN: The get_volume_3D function is called.
+    THEN: The function should raise a TypeError indicating that the image is not of type SimpleITK.Image.
+    """
+    invalid_image = np.array([[1, 2], [3, 4]])
+    mask_3d = sitk.Image(3, 3, 3, sitk.sitkUInt8)
+    patient_id = 1234
+
+    with pytest.raises(TypeError, match="Expected 'image' to be a SimpleITK Image"):
+        get_volume_3D(invalid_image, mask_3d, patient_id)
+
+def test_get_volume_3D_invalid_image_type():
+    """
+    GIVEN: A non-SimpleITK image (e.g., a numpy array).
+    WHEN: The get_volume_3D function is called.
+    THEN: The function should raise a TypeError indicating that the image is not of type SimpleITK.Image.
+    """
+    invalid_image = np.array([[1, 2], [3, 4]])
+    mask_3d = sitk.Image(3, 3, 3, sitk.sitkUInt8)
+    patient_id = 1234
+
+    with pytest.raises(TypeError, match="Expected 'image' to be a SimpleITK Image"):
+        get_volume_3D(invalid_image, mask_3d, patient_id)
+
+def test_get_volume_3D_invalid_patient_id():
+    """
+    GIVEN: A string patient_id.
+    WHEN: The get_volume_3D function is called.
+    THEN: The function should raise a ValueError indicating that patient_id must be int.
+    """
+    image_3d = sitk.Image(3, 3, 3, sitk.sitkUInt8)
+    mask_3d = sitk.Image(3, 3, 3, sitk.sitkUInt8)
+    patient_id = '123'
+
+    with pytest.raises(ValueError, match="Expected 'patient_id' to be a int"):
+        get_volume_3D(image_3d, mask_3d, patient_id)
 
