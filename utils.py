@@ -72,6 +72,7 @@ def extract_id(path):
         print(
             f"Invalid patient ID format in file name '{filename}'. Expected 'PR<number>', e.g., 'PR2'. The ID will be automatically assigned."
         )
+        return None
     else:
         print(
             f"No valid patient ID found in file name '{filename}'. Expected format: 'PR<number>', e.g., 'PR2'. The ID will be automatically assigned."
@@ -102,6 +103,32 @@ def new_patient_id(patients_id):
     while new_id in patients_id:
         new_id += 1
     return new_id
+
+
+def assign_patient_ids(images_path):
+    """
+    Assigns patient IDs based on image file paths, creating new IDs if not found.
+
+    :param images_path: A list of file paths to the image files
+    :return: A list of patient IDs extracted or assigned for each image path
+    """
+    if not isinstance(images_path, list):
+        raise TypeError("images_path must be a list")
+
+    if not images_path:
+        raise ValueError("The list of image paths cannot be empty")
+
+    patient_ids = set()
+    for im_path in images_path:
+        patient_id = extract_id(im_path)
+        if patient_id is None:
+            patient_id = new_patient_id(patient_ids)
+            print(f"Patient ID not found, automatically assigning new ID, for {im_path} id {patient_id}")
+        patient_ids.add(patient_id)
+
+    return patient_ids
+
+
 
 
 
