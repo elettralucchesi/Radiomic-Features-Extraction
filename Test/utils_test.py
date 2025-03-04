@@ -1,6 +1,6 @@
 import pytest
 import SimpleITK as sitk
-from utils import get_path_images_masks, read_image_and_mask
+from utils import get_path_images_masks, read_image_and_mask, extract_id
 
 
 @pytest.fixture
@@ -52,99 +52,109 @@ def test_get_path_images_masks_masks(setup_test_files):
 
     assert sorted(mask) == sorted(expected_mask), f"Expected masks: {expected_mask}, but got: {mask}"
 
-
-def test_empty_directory(tmp_path):
+def test_get_path_images_masks_invalid_int():
     """
-    Test behavior with an empty directory.
+    Test if passing an integer as path raises TypeError.
 
-    GIVEN: An empty temporary directory.
+    GIVEN: An invalid path type (integer).
+    WHEN: The get_path_images_masks function is called with an integer.
+    THEN: The function raises a TypeError with the appropriate error message.
+    """
+    with pytest.raises(TypeError, match="Path must be a string") as exc_info:
+        get_path_images_masks(123)  # Pass an integer
+    assert str(exc_info.value) == "Path must be a string", f"Expected error message 'Path must be a string', but got: {str(exc_info.value)}"
+
+
+def test_get_path_images_masks_invalid_none():
+    """
+    Test if passing None as path raises TypeError.
+
+    GIVEN: An invalid path type (None).
+    WHEN: The get_path_images_masks function is called with None.
+    THEN: The function raises a TypeError with the appropriate error message.
+    """
+    with pytest.raises(TypeError, match="Path must be a string") as exc_info:
+        get_path_images_masks(None)  # Pass None
+    assert str(exc_info.value) == "Path must be a string", f"Expected error message 'Path must be a string', but got: {str(exc_info.value)}"
+
+
+def test_get_path_images_masks_empty_directory(tmp_path):
+    """
+    Test if passing an empty directory raises ValueError.
+
+    GIVEN: An empty directory.
+    WHEN: The get_path_images_masks function is called on the directory.
+    THEN: The function raises a ValueError with the appropriate error message.
+    """
+    with pytest.raises(ValueError, match="The directory is empty or contains no .nii files") as exc_info:
+        get_path_images_masks(str(tmp_path))  # Pass an empty directory
+    assert str(exc_info.value) == "The directory is empty or contains no .nii files", f"Expected error message 'The directory is empty or contains no .nii files', but got: {str(exc_info.value)}"
+
+
+def test_get_path_images_masks_no_nii_files(tmp_path):
+    """
+    Test if a directory without .nii files raises ValueError.
+
+    GIVEN: A directory with files, but none with .nii extension.
+    WHEN: The get_path_images_masks function is called on the directory.
+    THEN: The function raises a ValueError with the appropriate error message.
+    """
+    # Create files with incorrect extensions
+    non_nii_files = ["file1.txt", "file2.csv", "file3.jpg"]
+
+    for file in non_nii_files:
+        (tmp_path / file).write_text("test")  # Create non-.nii files
+
+    with pytest.raises(ValueError, match="The directory is empty or contains no .nii files") as exc_info:
+        get_path_images_masks(str(tmp_path))  # Pass the directory without .nii files
+
+    assert str(
+        exc_info.value) == "The directory is empty or contains no .nii files", f"Expected error message 'The directory is empty or contains no .nii files', but got: {str(exc_info.value)}"
+
+
+
+
+def test_get_path_images_masks_mismatched_files(tmp_path):
+    """
+    Test if a directory with mismatched image and mask files raises ValueError.
+
+    GIVEN: A directory containing an unequal number of image and mask files.
     WHEN: The get_path_images_masks function is called.
-    THEN: The function returns empty lists for both images and masks.
+    THEN: The function raises a ValueError with the appropriate error message.
     """
-    img, mask = get_path_images_masks(str(tmp_path))
+    img_files = ["patient1.nii", "patient2.nii"]
+    mask_files = ["patient1_seg.nii"]  # Only one mask file for two image files
 
-    assert img == [], f"Expected no image files, but got: {img}"
+    for file in img_files + mask_files:
+        (tmp_path / file).write_text("test")  # Create both images and masks
+
+    with pytest.raises(ValueError, match="The number of image files does not match the number of mask files") as exc_info:
+        get_path_images_masks(str(tmp_path))
+
+    assert str(exc_info.value) == "The number of image files does not match the number of mask files", \
+        f"Expected error message 'The number of image files does not match the number of mask files', but got: {str(exc_info.value)}"
 
 
-def test_empty_directory_masks(tmp_path):
+def test_get_path_images_masks_multiple_masks_for_one_image(tmp_path):
     """
-    Test behavior with an empty directory for masks.
+    Test if a directory with more mask files than image files raises ValueError.
 
-    GIVEN: An empty temporary directory.
+    GIVEN: A directory containing more mask files than image files.
     WHEN: The get_path_images_masks function is called.
-    THEN: The function returns an empty list for masks.
+    THEN: The function raises a ValueError with the appropriate error message.
     """
-    img, mask = get_path_images_masks(str(tmp_path))
+    img_files = ["patient1.nii"]  # One image file
+    mask_files = ["patient1_seg.nii", "patient2_seg.nii"]  # Two mask files
 
-    assert mask == [], f"Expected no mask files, but got: {mask}"
+    for file in img_files + mask_files:
+        (tmp_path / file).write_text("test")  # Create one image and multiple masks
 
+    with pytest.raises(ValueError, match="The number of image files does not match the number of mask files") as exc_info:
+        get_path_images_masks(str(tmp_path))
 
-def test_missing_masks(tmp_path):
-    """
-    Test behavior when only images are present, without masks.
+    assert str(exc_info.value) == "The number of image files does not match the number of mask files", \
+        f"Expected error message 'The number of image files does not match the number of mask files', but got: {str(exc_info.value)}"
 
-    GIVEN: A temporary directory with image files but no corresponding masks.
-    WHEN: The get_path_images_masks function is called.
-    THEN: The function returns a list with image paths and an empty list for masks.
-    """
-    img_files = ["image3.nii", "image4.nii"]
-
-    for file in img_files:
-        (tmp_path / file).write_text("test")
-
-    img, mask = get_path_images_masks(str(tmp_path))
-    expected_img = [str(tmp_path / f) for f in img_files]
-
-    assert sorted(img) == sorted(expected_img), f"Expected images: {expected_img}, but got: {img}"
-
-
-def test_missing_masks_empty_masks(tmp_path):
-    """
-    Test behavior when no masks are present for images.
-
-    GIVEN: A temporary directory with images but no corresponding masks.
-    WHEN: The get_path_images_masks function is called.
-    THEN: The function returns an empty list for masks.
-    """
-    img_files = ["image3.nii", "image4.nii"]
-
-    for file in img_files:
-        (tmp_path / file).write_text("test")
-
-    img, mask = get_path_images_masks(str(tmp_path))
-
-    assert mask == [], f"Expected no masks, but got: {mask}"
-
-
-def test_multiple_masks_for_single_image(tmp_path):
-    """
-    Test behavior when there are multiple masks for a single image.
-
-    GIVEN: A temporary directory with an image and multiple corresponding masks.
-    WHEN: The get_path_images_masks function is called.
-    THEN: The test checks that there is a problem when more than one mask exists for the same image.
-    """
-    img_file = "image1.nii"
-    mask_files = ["image1_seg.nii", "image1_seg_2.nii"]  # Two masks for the same image
-
-    (tmp_path / img_file).write_text("test")  # Create the image
-    for mask in mask_files:
-        (tmp_path / mask).write_text("test")  # Create the two masks
-
-    # Call get_path_images_masks and check if multiple masks are found for the same image
-    img, mask = get_path_images_masks(str(tmp_path))
-
-    # Find out if there are multiple masks for any image
-    mask_dict = {}
-    for m in mask:
-        image_name = m.split("_seg")[0]  # Assuming "seg" in mask names for matching with image
-        if image_name not in mask_dict:
-            mask_dict[image_name] = []
-        mask_dict[image_name].append(m)
-
-    # Assert that there's more than one mask for any image
-    for image, masks in mask_dict.items():
-        assert len(masks) == 1, f"Error: More than one segmentation mask found for image: {image}"
 
 def test_read_image_and_mask_file_not_found():
     """
@@ -243,9 +253,6 @@ def test_read_image_and_mask_invalid_format(tmp_path):
         read_image_and_mask(str(image_file), str(mask_file))
 
 
-import pytest
-from utils import extract_id
-
 
 def test_extract_id_valid():
     """
@@ -259,71 +266,121 @@ def test_extract_id_valid():
     result = extract_id(valid_path)
     assert result == 12345, f"Expected patient ID: 12345, but got: {result}"
 
-
-def test_extract_id_invalid():
+def test_extract_id_invalid_format_with_pr():
     """
-    Test that the function returns None when no patient ID is found in the file path.
-
-    GIVEN: A file path without a patient ID.
+    GIVEN: A filename with an incorrectly formatted patient ID containing 'PR'.
     WHEN: The extract_id function is called.
-    THEN: The function returns None.
+    THEN: The function prints an error message and returns None.
     """
-    invalid_path = "/path/to/image_without_id.nii"
-    result = extract_id(invalid_path)
-    assert result is None, f"Expected None, but got: {result}"
+    result = extract_id('path/to/PR_2_image.nii')
+    assert result is None, f"Expected None, but got {result}"
 
-
-def test_extract_id_no_match():
+def test_extract_id_invalid_number_before_pr():
     """
-    Test that the function handles paths with no 'PR' followed by digits.
-
-    GIVEN: A file path with no valid patient ID.
+    GIVEN: A filename where the number precedes 'PR' (e.g., '2PR').
     WHEN: The extract_id function is called.
-    THEN: The function returns None.
+    THEN: The function prints an error message and returns None.
     """
-    path = "/path/to/invalid_patient_image.nii"
-    result = extract_id(path)
-    assert result is None, f"Expected None, but got: {result}"
+    result = extract_id('path/to/2PR_image.nii')
+    assert result is None, f"Expected None, but got {result}"
+
+def test_extract_id_no_pr():
+    """
+    GIVEN: A filename without a patient ID or 'PR' prefix.
+    WHEN: The extract_id function is called.
+    THEN: The function prints an error message and returns None.
+    """
+    result = extract_id('path/to/image_without_id.nii')
+    assert result is None, f"Expected None, but got {result}"
+
+
+def test_extract_id_multiple_pr_but_wrong_format():
+    """
+    GIVEN: A filename containing multiple 'PR' but in an incorrect format.
+    WHEN: The extract_id function is called.
+    THEN: The function prints an error message and returns None.
+    """
+    result = extract_id('path/to/PRabc_PR123X_image.nii')
+    assert result is None, f"Expected None, but got {result}"
+
+
+def test_extract_id_no_pr_prefix():
+    """
+    GIVEN: A filename where the ID is present but lacks the 'PR' prefix.
+    WHEN: The extract_id function is called.
+    THEN: The function prints an error message and returns None.
+    """
+    result = extract_id('path/to/12345_image.nii')
+    assert result is None, f"Expected None, but got {result}"
+
+def test_extract_id_non_string_path():
+    """
+    GIVEN: A non-string input as path.
+    WHEN: The extract_id function is called.
+    THEN: The function raises a TypeError.
+    """
+    with pytest.raises(TypeError, match="Path must be a string"):
+        extract_id(12345)
+
+def test_extract_id_none_input():
+    """
+    GIVEN: A None input.
+    WHEN: The extract_id function is called.
+    THEN: The function raises a TypeError.
+    """
+    with pytest.raises(TypeError, match="Path must be a string"):
+        extract_id(None)
+
+def test_extract_id_multiple_valid_pr():
+    """
+    GIVEN: A filename with multiple valid 'PR<number>' occurrences.
+    WHEN: The extract_id function is called.
+    THEN: The function returns only the first valid patient ID.
+    """
+    result = extract_id('path/to/PR12_PR34_image.nii')
+    assert result == 12, f"Expected 12, but got {result}"
+
+
 
 
 import pytest
-from utils import assign_new_patient_id
+from utils import new_patient_id
 
 
-def test_assign_new_patient_id_unique():
+def test_new_patient_id_unique():
     """
     Test that the function correctly assigns a unique patient ID.
 
     GIVEN: A set of existing patient IDs.
-    WHEN: The assign_new_patient_id function is called.
+    WHEN: The new_patient_id function is called.
     THEN: The function returns a new unique patient ID.
     """
     existing_ids = {1, 2, 3, 4}
-    result = assign_new_patient_id(existing_ids)
+    result = new_patient_id(existing_ids)
     assert result == 5, f"Expected new ID: 5, but got: {result}"
 
 
-def test_assign_new_patient_id_next_available():
+def test_new_patient_id_next_available():
     """
     Test that the function finds the next available patient ID, skipping any duplicates.
 
     GIVEN: A set of existing patient IDs.
-    WHEN: The assign_new_patient_id function is called.
+    WHEN: The new_patient_id function is called.
     THEN: The function returns the next available patient ID (skipping duplicates).
     """
     existing_ids = {1, 2, 4, 5}
-    result = assign_new_patient_id(existing_ids)
+    result = new_patient_id(existing_ids)
     assert result == 3, f"Expected new ID: 3, but got: {result}"
 
 
-def test_assign_new_patient_id_no_duplicates():
+def test_new_patient_id_no_duplicates():
     """
     Test that the function works even when there are no duplicates in the IDs.
 
     GIVEN: A set of patient IDs without any duplicates.
-    WHEN: The assign_new_patient_id function is called.
+    WHEN: The new_patient_id function is called.
     THEN: The function returns the next available patient ID.
     """
     existing_ids = {1, 2, 3}
-    result = assign_new_patient_id(existing_ids)
+    result = new_patient_id(existing_ids)
     assert result == 4, f"Expected new ID: 4, but got: {result}"
