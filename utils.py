@@ -50,7 +50,7 @@ def read_image_and_mask(image_path, mask_path):
 
 def extract_id(path):
     """
-    Extract the patient ID from the file name.
+    Extract the patient ID from the file name
 
     :param path: Path to the image file.
     :return: Patient ID as an integer if found and correctly formatted, else None.
