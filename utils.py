@@ -60,20 +60,21 @@ def extract_id(path):
     if path is None or not isinstance(path, str):
         raise TypeError("Path must be a string")
 
-    matches = re.findall(r'\bPR(\d+)', path)  # Find all occurrences of "PR<number>"
+    filename = os.path.basename(path)
+    matches = re.findall(r'\bPR(\d+)', filename)  # Find all occurrences of "PR<number>"
 
     if matches:
         if len(matches) > 1:
-            print(f"Multiple patient IDs found in '{path}'. The first occurrence ('PR{matches[0]}') will be used.")
+            print(f"Multiple patient IDs found in '{filename}'. The first occurrence ('PR{matches[0]}') will be used.")
         return int(matches[0])  # Use the first valid match
 
-    if "PR" in path:  # If "PR" exists but format is incorrect
+    if "PR" in filename:  # If "PR" exists but format is incorrect
         print(
-            f"Invalid patient ID format in file name '{path}'. Expected 'PR<number>', e.g., 'PR2'. The ID will be automatically assigned."
+            f"Invalid patient ID format in file name '{filename}'. Expected 'PR<number>', e.g., 'PR2'. The ID will be automatically assigned."
         )
     else:
         print(
-            f"No valid patient ID found in file name '{path}'. Expected format: 'PR<number>', e.g., 'PR2'. The ID will be automatically assigned."
+            f"No valid patient ID found in file name '{filename}'. Expected format: 'PR<number>', e.g., 'PR2'. The ID will be automatically assigned."
         )
 
     return None
