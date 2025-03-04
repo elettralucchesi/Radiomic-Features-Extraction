@@ -1,4 +1,5 @@
 import numpy as np
+import SimpleITK as sitk
 from scipy.ndimage import label
 
 def extract_largest_region(mask_slice, label_value):
@@ -62,3 +63,39 @@ def process_slice(mask_slice):
         largest_region_mask = extract_largest_region(mask_slice, lbl)
         if largest_region_mask is not None:
             return largest_region_mask, lbl
+
+
+
+# Estrai le slice 2D
+def get_slices_2D(image, mask, patient_id):
+
+    if not isinstance(image, sitk.Image):
+        raise TypeError(f"Expected 'image' to be a SimpleITK Image, but got {type(image)}.")
+
+    if not isinstance(mask, sitk.Image):
+        raise TypeError(f"Expected 'mask' to be a SimpleITK Image, but got {type(mask)}.")
+
+    # Verifica che patient_id sia una stringa
+    if not isinstance(patient_id, str):
+        raise ValueError(f"Expected 'patient_id' to be a string, but got {type(patient_id)}.")
+
+    image_array = sitk.GetArrayFromImage(image)
+    mask_array = sitk.GetArrayFromImage(mask)
+    patient_slices = []
+
+    for slice_idx in range(mask_array.shape[0]):
+        mask_slice = mask_array[slice_idx, :, :]
+        image_slice = image_array[slice_idx, :, :]
+
+        region_mask, region_label = process_slice(mask_slice)
+        largest_region_mask_image  = sitk.GetImageFromArray(region_mask)
+        image_slice_image = sitk.GetImageFromArray(image_slice)
+        patient_slices.append({
+            'PatientID': patient_id,
+            'Label': region_label,
+            'SliceIndex': slice_idx,
+            'ImageSlice': largest_region_mask_image ,
+            'MaskSlice': image_slice_image
+        })
+
+    return patient_slices
