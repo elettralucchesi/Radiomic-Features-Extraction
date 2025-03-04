@@ -39,6 +39,7 @@ def read_image_and_mask(image_path, mask_path):
     :param mask_path: Path to the mask file
     :return: Tuple containing the image and mask as SimpleITK images
     """
+
     img = sitk.ReadImage(image_path)
     mask = sitk.ReadImage(mask_path)
 
@@ -86,6 +87,16 @@ def new_patient_id(patients_id):
     :param patients_id: Set of existing patient IDs to check for uniqueness
     :return: A new, unique patient ID
     """
+
+    if not isinstance(patients_id, set):
+        raise TypeError("patients_id must be a set")
+
+    if any(not isinstance(i, int) for i in patients_id):
+        raise ValueError("All patient IDs must be integers")
+
+    if any(i < 0 for i in patients_id):
+        raise ValueError("Patient IDs cannot be negative")
+
     new_id = 1
     while new_id in patients_id:
         new_id += 1
