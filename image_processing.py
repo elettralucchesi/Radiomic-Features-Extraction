@@ -56,14 +56,13 @@ def process_slice(mask_slice):
     labels = np.unique(mask_slice)
     labels = labels[labels != 0]  # Exclude background
 
-    if len(labels) == 0:
-        raise ValueError("This mask has no labeled regions, impossible to perform feature extraction.")
-
     for lbl in labels:
         lbl = int(lbl)  # Convert numpy.int16 to native Python int
         largest_region_mask = extract_largest_region(mask_slice, lbl)
         if largest_region_mask is not None:
             return largest_region_mask, lbl
+    # If no region found
+    return None, None
 
 
 def get_slices_2D(image, mask, patient_id):
@@ -87,6 +86,9 @@ def get_slices_2D(image, mask, patient_id):
         image_slice = image_array[slice_idx, :, :]
 
         region_mask, region_label = process_slice(mask_slice)
+        if region_mask is None:
+            continue
+
         largest_region_mask_image  = sitk.GetImageFromArray(region_mask)
         image_slice_image = sitk.GetImageFromArray(image_slice)
         patient_slices.append({

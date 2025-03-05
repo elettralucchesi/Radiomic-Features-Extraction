@@ -1,6 +1,7 @@
 import pytest
 import numpy as np
 import SimpleITK as sitk
+from unittest.mock import patch
 from image_processing import *
 
 
@@ -248,18 +249,20 @@ def test_process_slice_multiple_labels_mask():
         f"Unexpected largest region mask for label {label}."
 
 
-def test_process_slice_empty_mask():
+def test_process_slice_returns_none_none():
     """
-    Test that the function raises a ValueError when the mask slice is empty.
-
-    GIVEN: An empty mask slice (all zeros).
-    WHEN: The process_slice function is called.
-    THEN: The function should raise a ValueError indicating no labeled regions are present.
+    GIVEN a mask slice with no labeled regions (all zeros)
+    WHEN process_slice is called
+    THEN it should return (None, None)
     """
-    mask_slice = np.zeros((5, 5), dtype=int)
+    # Create a 2D mask with only background (all values set to zero)
+    mask_slice = np.zeros((10, 10), dtype=np.uint16)
 
-    with pytest.raises(ValueError, match="This mask has no labeled regions, impossible to perform feature extraction."):
-        process_slice(mask_slice)
+    # Call the process_slice function
+    region_mask, label = process_slice(mask_slice)
+
+    # Check that the result is (None, None) with a single assert
+    assert (region_mask, label) == (None, None), f"Expected (None, None), but got ({region_mask}, {label})"
 
 
 def test_get_slices_2D_valid_length():
@@ -412,6 +415,29 @@ def test_get_slices_2D_invalid_image_type():
 
     with pytest.raises(TypeError, match="Expected 'image' to be a SimpleITK Image"):
         get_slices_2D("invalid_image", mask, patient_id)
+
+
+def test_get_slices_2D_skip_slice_on_none():
+    """
+    GIVEN a mask slice where process_slice returns None, None (no region found)
+    WHEN get_slices_2D is called
+    THEN it should skip that slice and not include it in the results
+    """
+    # Create a 3D image and mask where one slice will have no region
+    img = sitk.GetImageFromArray(np.random.rand(3, 10, 10))  # 3 slices
+    mask = sitk.GetImageFromArray(np.array([np.zeros((10, 10)), np.zeros((10, 10)), np.ones((10, 10))],
+                                           dtype=np.uint16))  # Only last slice has region
+
+    # Mock patient ID
+    patient_id = 123
+
+    # Mock the process_slice function to return (None, None) for the first two slices and valid results for the last slice
+    with patch('image_processing.process_slice', side_effect=[(None, None), (None, None), (np.ones((10, 10)), 1)]):
+        result = get_slices_2D(img, mask, patient_id)
+
+    # Assert that the result contains only one slice (the third slice where the region was found)
+    assert len(result) == 1, f"Expected 1 slice, but got {len(result)}"
+
 
 def test_invalid_mask_type():
     """
