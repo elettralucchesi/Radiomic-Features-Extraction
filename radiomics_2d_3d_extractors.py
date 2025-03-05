@@ -75,6 +75,47 @@ def radiomic_extractor_3D(patient_dict_3D, extractor):
     return all_features
 
 
+def radiomic_extractor_2D(patient_dict_2D, extractor):
+    """
+    Extracts radiomic features from 2D medical image slices.
 
+    Args:
+        patient_dict_2D (dict): Dictionary containing patient 2D slices.
+        extractor: Configured RadiomicsFeatureExtractor object.
+
+    Returns:
+        dict: Extracted features for each patient slice and label.
+    """
+    all_features_2D = {}
+
+    for patient_id, patient_slices in patient_dict_2D.items():
+        for slice_data in patient_slices:
+            lbl = slice_data["Label"]
+            index = slice_data["SliceIndex"]
+
+            if lbl == 0:
+                raise ValueError(f"No labels found in mask for patient {patient_id}")
+
+            try:
+                img_slice = slice_data["ImageSlice"]
+                mask_slice = slice_data["MaskSlice"]
+
+                features = extractor.execute(img_slice, mask_slice, label=int(lbl))
+
+                print(f"Features extracted: {features}")
+
+                features = {"MaskLabel": lbl, "SliceIndex": index, "PatientID": patient_id, **features}
+                key = f"{patient_id}-{index}-{lbl}"
+                # Debug log to verify key creation
+                print(f"Generated key: {key}")  # Verifica la creazione della chiave
+                # Log per verificare la creazione della chiave e l'aggiornamento del dizionario
+                print(f"Features: {features}")  # Verifica che le feature siano correttamente estratte
+
+                all_features_2D[key] = features
+                # Debug log to check if the key is being added
+                logging.debug(f"Added features for {key}: {features}")
+            except Exception as e:
+                logging.error(f"[Invalid Feature] for patient {patient_id}, Slice {index}, Label {lbl}: {e}")
+    return all_features_2D
 
 
