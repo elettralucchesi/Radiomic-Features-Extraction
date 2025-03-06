@@ -139,20 +139,42 @@ def radiomic_extractor_2D(patient_dict_2D, extractor):
 
                 features = extractor.execute(img_slice, mask_slice, label=int(lbl))
 
-                print(f"Features extracted: {features}")
-
                 features = {"MaskLabel": lbl, "SliceIndex": index, "PatientID": patient_id, **features}
                 key = f"{patient_id}-{index}-{lbl}"
-                # Debug log to verify key creation
-                print(f"Generated key: {key}")  # Verifica la creazione della chiave
-                # Log per verificare la creazione della chiave e l'aggiornamento del dizionario
-                print(f"Features: {features}")  # Verifica che le feature siano correttamente estratte
-
                 all_features_2D[key] = features
                 # Debug log to check if the key is being added
                 logging.debug(f"Added features for {key}: {features}")
             except Exception as e:
                 logging.error(f"[Invalid Feature] for patient {patient_id}, Slice {index}, Label {lbl}: {e}")
     return all_features_2D
+
+
+def extract_radiomic_features(patient_dict, extractor, mode="3D"):
+    """
+    Extracts radiomic features from medical images in either 2D or 3D mode.
+
+    Args:
+        patient_dict (dict): Dictionary containing patient data.
+        extractor: Configured RadiomicsFeatureExtractor object.
+        mode (str): Processing mode, either "2D" or "3D". Defaults to "3D".
+
+    Returns:
+        dict: Extracted radiomic features.
+
+    Raises:
+        ValueError: If mode is not "2D" or "3D" or if the extractor is not configured.
+        TypeError: If patient_dict is not a dictionary.
+    """
+    if not isinstance(patient_dict, dict):
+        raise TypeError("patient_dict must be a dictionary.")
+    if mode not in ["2D", "3D"]:
+        raise ValueError("Invalid mode. Choose either '2D' or '3D'.")
+    if not hasattr(extractor, 'execute'):
+        raise ValueError("Extractor is not configured properly. Ensure it has the necessary methods.")
+
+    if mode == "3D":
+        return radiomic_extractor_3D(patient_dict, extractor)
+    else:
+        return radiomic_extractor_2D(patient_dict, extractor)
 
 
