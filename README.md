@@ -7,7 +7,7 @@ This project enables the extraction of radiomic features from segmented 3D MRI i
 
 The extracted features are saved in CSV format for each segmented lesion of each patient (for 3D) or for each segmented lesion in individual slices (for 2D).
 
-__
+___
 ## List of contents
 - Fetures
 - Installation
@@ -17,7 +17,7 @@ __
 - Results 
 - License
 
-__
+___
 ## Features
 - Accepts 3D MRI images in **NIfTI (.nii)** format.
 - Requires an image and a segmentation mask, where the mask contains the segmented lesion.
