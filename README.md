@@ -54,7 +54,7 @@ pip install -r requirements.txt
 │   ├── PR1_seg.nii      # Segmentation Mask
 ├── 📂 Patient_2/
 │   ├── PR2.nii          # MRI Image
-│   ├── PR2_mask.nii     # Segmentation
+│   ├── PR2_seg.nii     # Segmentation
 ```
 - A **YAML configuration file** for feature extraction should be provided in the `data/` folder (e.g., `pyradiomics_config.yaml`).
 
