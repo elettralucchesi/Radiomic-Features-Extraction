@@ -73,7 +73,7 @@ config_file = ./data/pyradiomics_config.yaml  # YAML file for feature selection
 
 ### Project Structure
 
-###Testing
+### Testing
 
 ### Results
 The extracted radiomic features are stored in output_files/ as CSV files. Each file contains features for each segmented lesion:
